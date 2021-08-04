@@ -1,9 +1,4 @@
 ﻿using Sandbox;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GodRealm
 {
@@ -18,7 +13,7 @@ namespace GodRealm
 			vertexBuffer = new();
 			vertexBuffer.Init( true );
 			Transmit = TransmitType.Always; 
-			RenderBounds = BBox.FromHeightAndRadius( 16384, 16384 );
+			RenderBounds = BBox.FromHeightAndRadius( 16384, 16384 ); // TODO: Is there a better way of doing this?
 
 			Vertex[] vertex =
 			{

@@ -2,11 +2,9 @@
 
 namespace GodRealm
 {
-	[Library( "godrealm" )]
+	[Library( "godrealm", Title = "Ray Marched 'God Realm' Demo" )]
 	public partial class GodRealmGame : Sandbox.Game
 	{
-		public GodRealmGame() { }
-
 		public override void ClientJoined( Client client )
 		{
 			base.ClientJoined( client );

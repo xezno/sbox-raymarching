@@ -6,7 +6,6 @@ using Sandbox;
  * Day/night cycle
  * Same cycle rate as Minecraft (approx 20 minutes)
  */
-
 namespace GodRealm
 {
 	public partial class GodRealmGame
@@ -18,10 +17,6 @@ namespace GodRealm
 
 			float gameSecondsPerTick = gameSecondsPerRtSecond / Global.TickRate;
 			CurrentTime += TimeSpan.FromSeconds( gameSecondsPerTick );
-
-			// Fast forward night
-			// int hours = CurrentTime.Hours;
-			// if ( hours > 17 || hours < 8 ) CurrentTime += TimeSpan.FromMinutes( 10 );
 		}
 
 		private Rotation CurrentSunRotation { get; set; } = Rotation.Identity;
@@ -50,8 +45,6 @@ namespace GodRealm
 					float calcDeg = seconds * degPerSec;
 					CurrentSunRotation = Rotation.FromPitch( calcDeg ) * Rotation.FromYaw( 45 ) * Rotation.FromRoll( 45 );
 					sunEntity.Transform = new Transform( sunEntity.Transform.Position, CurrentSunRotation );
-					//(sunEntity as EnvironmentLightEntity).Brightness = 0;
-					//`(sunEntity as EnvironmentLightEntity).SkyIntensity = 1;
 				}
 
 				// 
