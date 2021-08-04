@@ -20,17 +20,17 @@ Material MakeMaterial( float4 color, float specularAmt = 1, int specularPow = 51
 }
 
 // Grass color
-#define MAT_GRASS   MakeMaterial( float4( 0.0, 1.0, 0.0, 1.0 ), 0.0f );
+#define MAT_GRASS   MakeMaterial( float4( 0.0, 1.0, 0.0, 1.0 ), 0.0f )
 
 // Sand color
-#define MAT_SAND    MakeMaterial( float4( 1.0, 1.0, 0.0, 1.0 ), 1.0, 64 );
+#define MAT_SAND    MakeMaterial( float4( 1.0, 1.0, 0.0, 1.0 ), 1.0, 64 )
 
 // Water color
-#define MAT_WATER   MakeMaterial( float4( 0.0, 0.0, 1.0, 1.0 ), 1.0, 1024 );
+#define MAT_WATER   MakeMaterial( float4( 0.0, 0.0, 1.0, 1.0 ), 1.0, 1024 )
 
 // Bronze color
-#define MAT_BRONZE  MakeMaterial( float4( 0.8, 0.8, 0.2, 1.0 ) );
+#define MAT_BRONZE  MakeMaterial( float4( 0.8, 0.8, 0.2, 1.0 ) )
 
-#define MAT_ERROR   MakeMaterial( float4( 1.0, 0.0, 0.0, 1.0 ) );
+#define MAT_ERROR   MakeMaterial( float4( 1.0, 0.0, 0.0, 1.0 ) )
 
-#define MAT_MATTE_BLACK MakeMaterial( float4( 0.8, 0.8, 0.8, 1.0 ), 0.5, 32 );
+#define MAT_MATTE_BLACK MakeMaterial( float4( 0.21, 0.24, 0.25, 1.0 ), 0, 1024 )

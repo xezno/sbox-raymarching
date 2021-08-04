@@ -4,10 +4,13 @@
 // ================================================================================
 
 #define PI 3.1415925359
-#define MAX_STEPS 2048
-#define MAX_DIST 1000
+//#define MAX_STEPS 128
+#define MAX_STEPS 128
+//#define MAX_DIST 128
+#define MAX_DIST 32
+//#define SURFACE_DIST .025
 #define SURFACE_DIST .001
-#define EPS 0.00005
+#define EPS 0.005
 
 float GetDist( float3 p, out Material mat ); // Redefine this in your own file!!!
 
@@ -15,32 +18,28 @@ float3 GetNormal( float3 p )
 {
     Material _;
     float d = GetDist( p, _ );
-    float2 e = float2( 0.001, 0 );
+    float2 e = float2( EPS, 0 );
     float3 n = d - float3(
-    GetDist( p - e.xyy, _ ),  
-    GetDist( p - e.yxy, _ ),
-    GetDist( p - e.yyx, _ ));
+        GetDist( p - e.xyy, _ ),  
+        GetDist( p - e.yxy, _ ),
+        GetDist( p - e.yyx, _ )
+    );
 
     return normalize( n );
 }
 
-bool RayMarch( float3 ro, float3 rd, out float d, out Material mat ) 
+float RayMarch( float3 ro, float3 rd, out Material mat ) 
 {
     float dO = 0;
-    for (int i = 0; i < MAX_STEPS; i++) { 
-        float3 p = rd * dO + (ro);
+    for (int i = 0; i < MAX_STEPS; i++)
+    { 
+        float3 p = (rd * dO) + ro;
         float ds = GetDist( p, mat );
         dO += ds;
         if ( dO > MAX_DIST || ds < SURFACE_DIST )
             break;
     }
-
-    d = dO;
-
-    if ( dO > MAX_DIST )
-        return false;
-
-    return true;
+    return dO;
 }
 
 struct Ray 
@@ -65,9 +64,25 @@ Ray CreateRay(float2 uv, float3 camPos, float3 lookAt, float zoom)
 }
 
 void SetupCamera( float2 uvs, float fov, out float Px, out float Py ) 
-{    
+{
+    float2 ScreenResolution = g_vRenderTargetSize / ResolutionDownSampling;
+    const float texSize = g_vRenderTargetSize / ScreenResolution;
+    float2 snappedUvs = round( uvs / texSize + 0.5 ) * texSize;
+
     float aspectRatio = g_vRenderTargetSize.x / g_vRenderTargetSize.y;
-    Px = (2 * ((uvs.x + 0.5) / g_vRenderTargetSize.x) - 1) * tan( fov / 2 * PI / 180 ) * aspectRatio;
-    Py = (2 * ((uvs.y + 0.5) / g_vRenderTargetSize.y) - 1) * tan( fov / 2 * PI / 180 );
+    Px = (2 * ((snappedUvs.x + 0.5) / g_vRenderTargetSize.x) - 1) * tan( fov / 2 * PI / 180 ) * aspectRatio;
+    Py = (2 * ((snappedUvs.y + 0.5) / g_vRenderTargetSize.y) - 1) * tan( fov / 2 * PI / 180 );
     Py = -Py;
+}
+
+// Union Operation
+float OpU( float a, float b, Material mat, inout Material matO )
+{
+    float d = min( a, b );
+    matO = matO;
+
+    if ( b - d < EPS )
+        matO = mat;
+    
+    return d;
 }

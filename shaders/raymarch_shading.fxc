@@ -6,9 +6,9 @@
 // Basic lambertian diffuse
 float ShadeDiffuse(float3 N, float3 L)
 {
-    float3 nrmN = normalize(N);
-    float3 nrmL = normalize(L);
-    float result = dot(nrmN, nrmL);
+    float3 nrmN = normalize( N );
+    float3 nrmL = normalize( L );
+    float result = dot( nrmN, nrmL );
     return pow( max(result, 0.0), 2 );
 }
 

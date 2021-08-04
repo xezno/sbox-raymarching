@@ -13,7 +13,6 @@ namespace GodRealm
 			vertexBuffer = new();
 			vertexBuffer.Init( true );
 			Transmit = TransmitType.Always; 
-			RenderBounds = BBox.FromHeightAndRadius( 16384, 16384 ); // TODO: Is there a better way of doing this?
 
 			Vertex[] vertex =
 			{
@@ -24,6 +23,14 @@ namespace GodRealm
 			};
 
 			vertexBuffer.AddQuad( vertex[3], vertex[2], vertex[1], vertex[0] );
+		}
+
+		[Event.Tick]
+		public void OnTick()
+		{
+			// TODO: Is there a better way of doing this?
+			Vector3 a = Vector3.One * 16384;
+			RenderBounds = new BBox( Local.Pawn.Position - a, Local.Pawn.Position + a );
 		}
 
 		public override void DoRender( SceneObject obj )

@@ -15,9 +15,43 @@ float Ellipsoid( in float3 p, in float3 r ) // approximated
     return k0*(k0-1.0)/k1;
 }
 
+#define I float4( \
+    ( 0.5 * sin( g_flTime ) )      , \
+    ( 0.5 * cos( g_flTime + PI ) ) , \
+    ( 0.5 * sin( g_flTime + PI ) ) , \
+    ( 0.5 * cos( g_flTime ) )       \
+)
+
+float F(float3 P){
+    float R=sin((I.x+P.z*0.01)*3.176)*.45+.5,S=3.4312-sin(I.x*0.1);
+    float4 p=float4(P,1),o=p,s=float4(S,S,S,abs(S))/R;
+    for(int i=0;i<24;i++){
+        if(i==3||i==7||i==11||i==15||i==19||i==23) R=sin((I.x+P.z*0.01+float(i)*0.25*sin(I.x*.012211154)*3.8)*3.176)*0.45+0.5;
+        p.xyz=clamp(p.xyz,-1.,1.)*2.-p.xyz;
+        float r2=dot(p.xyz,p.xyz);
+        if(r2>1000.)break;
+        p=p*clamp(max(R/r2,R),0.,1.)*s+o;
+    }
+    return((length(p.xyz)-abs(S-1.))/p.w-pow(abs(S),float(1-24)));
+}
 
 float Box( float3 p, float3 b )
 {
     float3 d = abs(p) - b;
     return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+
+float3 Z(float3 p,float a){
+    return float3(cos(a)*p.x-sin(a)*p.y,cos(a)*p.y+sin(a)*p.x,p.z);
+}
+
+float MandelBox( float3 p ) 
+{
+    float3 c = float3( 10, 10, 8 );
+    p = fmod( p, c ) - 0.5 * c;
+    float3 q = abs( Z( p, p.z * PI / 10 * 4 ) );
+    float d2 = max( q.z - 10, max( ( q.x * 0.866025 + q.y * 0.5 ), q.y ) - 0.08);
+    p = Z( p, p.z * PI / 10 * ( length( p.xy ) - 3 ) * sin( I.x * 0.01 ) * 0.8 );
+    return max( F( p ), -d2);
 }
