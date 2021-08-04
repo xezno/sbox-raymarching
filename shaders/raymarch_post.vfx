@@ -1,0 +1,257 @@
+//================================================================================
+// Ray marching post-process demo
+// Author: Alex "xezno" Guthrie
+// ================================================================================
+
+HEADER
+{
+    DevShader = true;
+    CompileTargets = ( IS_SM_50 && ( PC || VULKAN ) );
+    Description = "Basic ray marching";
+    Version = 3141592653;
+}
+
+MODES
+{
+    VrForward(); // The shading mode we'll use. Typically you'll keep this for forward rendering
+}
+
+FEATURES
+{
+    // Features MUST begin with F_
+    // Feature(F_ENABLE_DEPTH, 0..1, "Category name");
+}
+
+COMMON
+{
+    // Definitions placed in here will be accessed to all defined shdaer types below.
+    // Typically you'd define your pixel shader input here as well as all the constbuffers you'll be using.
+
+    // Required by re_system & re_vr_shared_standard_vs_code
+    #include "includes/re_Globals.fxc"
+    #include "includes/re_PerViewConstantBuffer.fxc"
+    #include "includes/re_PerViewConstantBufferVR.fxc"
+    #include "includes/re_SunLightShaderParamsCB.fxc"
+    #include "includes/re_system.fxc"
+
+    struct PsInput
+    {
+        #include "includes/re_vr_shared_standard_ps_input.fxc"
+    };
+
+    struct VsInput
+    {
+        #include "includes/re_vr_shared_standard_vs_input.fxc"
+    };
+}
+
+VS
+{
+    #include "includes/re_vr_shared_standard_vs_code.fxc"
+
+    PsInput MainVs(VsInput i)
+    {
+        // Handle initial calculations for uvs, texture scrolling etc
+        PsInput o = VS_SharedStandardProcessing( i );
+
+        o.vPosition = float4( i.vPosition, 1 ); // We're doing post-processing, so stay with the camera at all times
+        return o;
+
+    }
+}
+
+PS
+{
+    RenderState( DepthEnable, false );
+    RenderState( DepthWriteEnable, false );
+
+    Texture2D<float4> g_FrameBuffer< AsFramebuffer(true); >;
+    SamplerState g_FrameBuffer_s< AddressU(CLAMP); AddressV(CLAMP); AddressW(CLAMP); >;
+
+    float3 SkyColor< UiGroup(""); UiType(Color); >;
+    Float3Attribute( SkyColor, true );
+
+    bool DitheringEnabled< UiGroup(""); UiType(CheckBox); Default( 1 ); >;
+    BoolAttribute( DitheringEnabled, true );
+
+    // Create our output
+    struct PsOutput
+    {
+        float4 vColor0 : SV_Target0; // Our output color
+    };
+
+    // ================================================================================
+    // Raymarch includes
+    #include "raymarch_common.fxc"
+    #include "raymarch_dithering.fxc"
+    #include "raymarch_shading.fxc"
+    #include "raymarch_materials.fxc"
+    #include "raymarch_basic.fxc"
+    #include "raymarch_sdf.fxc"
+    // ================================================================================
+    
+    float GetLight( float3 p, float3 camPos, Material mat )
+    { 
+        // Lambert shading
+        float3 l = normalize( g_vSunLightDir );
+        float3 n = normalize( GetNormal( p ) );
+
+        float fLambert = ShadeDiffuse( n, l );
+
+        // Specular
+        float3 v = normalize( camPos - p );
+        float3 h = normalize( l + v );
+        fLambert += ShadeSpecular( n, h, mat.specularPow ) * mat.specularAmt;
+
+        // Shadowing
+        float d;
+        Material _;
+        RayMarch( p + n * SURFACE_DIST * 2, l, d, _ );
+        
+        if ( d < length( g_vSunLightDir ) )
+            fLambert = 0;
+    
+        return fLambert;
+    }
+
+    float SinAdj( float offset = 0) {
+        return ( 0.5 * sin( g_flTime + offset ) + 0.5 );
+    }
+
+    float GetDist( float3 p, out Material mat ) 
+    {
+        float4 s = float4( -1, 6, 1 * SinAdj( PI ) + 1, 1 );
+        float sphereDist = length( p - s.xyz ) - s.w;
+        
+        float4 s2 = float4( 1, 6, 1 * SinAdj( 0 ) + 1, 1 );
+        float sphereDist2 = length( p - s2.xyz ) - s2.w;
+
+        float cubeDist = Box( p - float3( 0.0, 0.0, 3 ), float3( 3, 3, 3 ) );
+
+        float planeDist = p.z;
+        float d = min( min( min( sphereDist, cubeDist ), sphereDist2 ), planeDist );
+
+        mat = MAT_ERROR;
+
+        if ( planeDist - d < 0.01 )
+            mat = MAT_GRASS;
+        if ( sphereDist - d < 0.01 )
+            mat = MAT_SAND;
+        if ( sphereDist2 - d < 0.01 )
+            mat = MAT_WATER;
+        if ( cubeDist - d < 0.01 )
+            mat = MAT_MATTE_BLACK;
+
+        return d;
+    }
+
+        
+    float GetAO( in float3 pos, in float3 nor )
+    {
+        Material _;
+        float occ = 0.0;
+        float sca = 1.0;
+        for( int i = 0; i < 5; i++ )
+        {
+            float h = 0.01 + 0.12 * float( i ) / 2;
+            float d = GetDist( pos + h * nor, _ );
+            occ += (h - d) * sca;
+            sca *= 0.95;
+            if( occ > 0.35 ) break;
+        }
+        return clamp( 1.0 - 3.0 * occ, 0, 1.0 ) * ( 0.5 + 0.5 * nor.y );
+    }
+
+    //
+    // Main ray marched scene
+    //
+    float4 RayMarchingPass( PsInput i, float4 inColor ) 
+    {
+        float2 vSnappedUvs = i.vPosition.xy;
+
+        //
+        // Camera setup
+        //
+        float3 cameraPosition = float3( g_vCameraPositionWs.x, g_vCameraPositionWs.y, g_vCameraPositionWs.z ) / 128;
+        cameraPosition = cameraPosition + float3( 0, 0, 1 );
+
+        const float fov = 110;
+        float Px, Py;
+        SetupCamera( vSnappedUvs, fov, Px, Py );
+
+        //
+        // Ray march the scene
+        //
+        Ray ray = CreateRay( float2( Px, Py ), cameraPosition, cameraPosition + float3( 0, 0, 1 ), 1 );
+        float3 ro = ray.pos;
+        float3 rd = ray.dir;
+
+        float d;
+        Material mat;
+        bool success = RayMarch( ro, rd, d, mat );
+        inColor = float4( (1.0 - (d.xxx / 16)) * mat.color, 1 );
+
+        // Sun calc
+        float sun = clamp( dot( g_vSunLightDir, rd ), 0.0, 1.0 );
+
+        //
+        // Lighting / render calculations
+        // 
+        float3 p = ro + rd * d;
+        float fLambert = GetLight( p, cameraPosition, mat );
+        inColor = lerp( mat.color * 0.5, mat.color, fLambert );
+        inColor *= 1.4;
+
+        // AO
+        inColor = lerp( inColor * 0.8, inColor, GetAO( p, GetNormal( p ) ) );
+        
+        
+        if ( success < 1 )
+        {
+            // Ray didn't hit an object, just draw a basic sky
+            float3 col = SkyColor;
+            col += 0.2 * g_vSunLightColor.xyz * pow( sun, 8.0 );
+            col += 1.0 * g_vSunLightColor.xyz * pow( sun, 2048.0 );
+
+            inColor = float4( col, 1 );
+        }
+
+        inColor = smoothstep( 0.15, 1.1, inColor );
+
+        return SrgbGammaToLinear( inColor.xyz ).xyzx;
+    }
+
+    //
+    // Post process: dithering
+    //
+    float4 DitheringPass( PsInput i, float4 inColor ) 
+    {
+        float2 ScreenResolution = g_vRenderTargetSize;
+        const float texSize = g_vRenderTargetSize / ScreenResolution;
+        // const float snapLevel = 1.0 / 64;
+
+        float4 snappedColor = inColor;
+        // snappedColor = round( snappedColor / snapLevel ) * snapLevel;
+
+        float3 samp = Dither( i.vPosition.xy / texSize, snappedColor );
+        inColor = float4( samp, 1 );
+        inColor *= ( luma( samp ) ) * 8;
+
+        inColor = lerp( snappedColor, inColor, 0.025 );
+
+        return inColor;
+    }
+
+    PsOutput MainPs( const PsInput i )
+    {
+        PsOutput o;
+        o.vColor0 = float4( 0, 0, 0, 0 );
+
+        o.vColor0 = RayMarchingPass( i, o.vColor0 );
+        if ( DitheringEnabled )
+            o.vColor0 = DitheringPass( i, o.vColor0 );
+
+        o.vColor0 = SrgbGammaToLinear( o.vColor0.xyz ).xyzx;
+        return o;
+    }
+}

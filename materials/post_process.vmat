@@ -1,0 +1,9 @@
+// THIS FILE IS AUTO-GENERATED
+
+Layer0
+{
+	shader "raymarch_post.vfx"
+
+	DitheringEnabled "1"
+	SkyColor "[0.270588 0.803922 0.937255 0.000000]"
+}

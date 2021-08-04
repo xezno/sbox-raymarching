@@ -1,0 +1,73 @@
+//================================================================================
+// Basic ray marching functions
+// Author: Alex "xezno" Guthrie
+// ================================================================================
+
+#define PI 3.1415925359
+#define MAX_STEPS 2048
+#define MAX_DIST 1000
+#define SURFACE_DIST .001
+#define EPS 0.00005
+
+float GetDist( float3 p, out Material mat ); // Redefine this in your own file!!!
+
+float3 GetNormal( float3 p )
+{
+    Material _;
+    float d = GetDist( p, _ );
+    float2 e = float2( 0.001, 0 );
+    float3 n = d - float3(
+    GetDist( p - e.xyy, _ ),  
+    GetDist( p - e.yxy, _ ),
+    GetDist( p - e.yyx, _ ));
+
+    return normalize( n );
+}
+
+bool RayMarch( float3 ro, float3 rd, out float d, out Material mat ) 
+{
+    float dO = 0;
+    for (int i = 0; i < MAX_STEPS; i++) { 
+        float3 p = rd * dO + (ro);
+        float ds = GetDist( p, mat );
+        dO += ds;
+        if ( dO > MAX_DIST || ds < SURFACE_DIST )
+            break;
+    }
+
+    d = dO;
+
+    if ( dO > MAX_DIST )
+        return false;
+
+    return true;
+}
+
+struct Ray 
+{
+    float3 pos;
+    float3 dir;
+};
+
+Ray CreateRay(float2 uv, float3 camPos, float3 lookAt, float zoom) 
+{
+    float3 f = g_vCameraDirWs;
+    float3 u = g_vCameraUpDirWs;
+    float3 r = normalize(cross(f, u));
+    float3 c = ( camPos + g_vCameraDirWs ) + f * zoom;
+    float3 i = c + uv.x * r + uv.y * u;
+    float3 dir = i -camPos;
+
+    Ray ray;
+    ray.pos = camPos;
+    ray.dir = normalize( dir );
+    return ray;
+}
+
+void SetupCamera( float2 uvs, float fov, out float Px, out float Py ) 
+{    
+    float aspectRatio = g_vRenderTargetSize.x / g_vRenderTargetSize.y;
+    Px = (2 * ((uvs.x + 0.5) / g_vRenderTargetSize.x) - 1) * tan( fov / 2 * PI / 180 ) * aspectRatio;
+    Py = (2 * ((uvs.y + 0.5) / g_vRenderTargetSize.y) - 1) * tan( fov / 2 * PI / 180 );
+    Py = -Py;
+}

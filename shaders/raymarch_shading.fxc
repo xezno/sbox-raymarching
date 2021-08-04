@@ -1,0 +1,19 @@
+//================================================================================
+// Basic ray marching shading functions
+// Author: Alex "xezno" Guthrie
+// ================================================================================
+
+// Basic lambertian diffuse
+float ShadeDiffuse(float3 N, float3 L)
+{
+    float3 nrmN = normalize(N);
+    float3 nrmL = normalize(L);
+    float result = dot(nrmN, nrmL);
+    return pow( max(result, 0.0), 2 );
+}
+
+// Basic blinn-phong specular
+float ShadeSpecular( float3 N, float3 H, float shininess ) 
+{
+    return clamp( pow( max( dot( N, H ), 0.0 ), shininess ), 0.0, 1.0 ); // Shit starts getting wacky below a power of 16
+}
