@@ -121,12 +121,12 @@ PS
 
         d = OpU( d, Terrain( p ), MAT_MUD, mat );
         d = OpD( d, -p.z, MAT_GRASS, mat );
-        d = OpU( d, p.z+16, MAT_MUD, mat );
+        // d = OpU( d, p.z+32, MAT_MUD, mat );
         // d = OpU( d, p.z - 8 + ( SmoothNoise( ( p.xy * 2 ) + g_flTime.xx ) * 0.025 ), MAT_WATER, mat );
 
         // Spawn obelisk
-        d = OpD( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 8, 8, 1000 ) ), MAT_MATTE_BLACK, mat );
-        d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
+        // d = OpD( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 8, 8, 1000 ) ), MAT_MATTE_BLACK, mat );
+        // d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
 
         return d;
     }
@@ -165,7 +165,7 @@ PS
         float3 cameraPosition = float3( g_vCameraPositionWs.x, g_vCameraPositionWs.y, g_vCameraPositionWs.z ) / 128;
         cameraPosition = cameraPosition + float3( 0, 0, 1 );
 
-        const float fov = 130;
+        const float fov = 110;
         float Px, Py;
         SetupCamera( vSnappedUvs, fov, Px, Py );
 
@@ -175,7 +175,6 @@ PS
         Ray ray = CreateRay( float2( Px, Py ), cameraPosition, cameraPosition + float3( 0, 0, 1 ), 1 );
         float3 ro = ray.pos;
         float3 rd = ray.dir;
-
 
         float3 resultRd;
         Material mat;
@@ -195,7 +194,6 @@ PS
         mat.color = lerp( mat.color, GRASS_COLOR, grassAmt );
 
         inColor = ( mat.color * AmbientColor.xyzx * 1.1 ) + ( mat.color * fLambert * 0.6 );
-        inColor *= 1.3333;
 
         // AO
         inColor = lerp( inColor * 0.8, inColor, GetAO( p, n ) );
@@ -203,22 +201,20 @@ PS
         // Sun glare
         inColor += ( sun * 0.05 * float4(1,0,0,1) );
 
-        float fogMul = d / MaxDist;
+        float fogMul = pow( d / MaxDist, 2 );
         fogMul = clamp( fogMul, 0, 1 );
 
         // Ray didn't hit an object, just draw a basic sky
         float3 fogCol = SkyColor;
         inColor = lerp( inColor, float4( fogCol, 1 ), fogMul );
 
-        
         inColor.xyz += ( 0.05 * g_vSunLightColor.xyz * pow( sun, 32.0 ) ) * pow( fogMul, 12 );
         inColor.xyz += ( 1.0 * g_vSunLightColor.xyz * pow( sun, 2048.0 ) ) * pow( fogMul, 12 );
 
         inColor = smoothstep( 0.15, 1.1, inColor );
 
-        // return mat.color;
-
-        return SrgbGammaToLinear( pow( inColor.xyz, 1.1 ) ).xyzx;
+        return pow( inColor, 0.6 );
+        // return SrgbGammaToLinear( pow( inColor.xyz, 1.1 ) ).xyzx;
     }
 
     //
