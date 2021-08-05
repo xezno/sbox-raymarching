@@ -122,7 +122,7 @@ PS
         d = OpU( d, Terrain( p ), MAT_MUD, mat );
         d = OpD( d, -p.z, MAT_GRASS, mat );
         d = OpU( d, p.z+16, MAT_MUD, mat );
-        // d = OpU( d, p.z - 8 + ( smoothNoise( ( p.xy * 2 ) + g_flTime.xx ) * 0.025 ), MAT_WATER, mat );
+        // d = OpU( d, p.z - 8 + ( SmoothNoise( ( p.xy * 2 ) + g_flTime.xx ) * 0.025 ), MAT_WATER, mat );
 
         // Spawn obelisk
         d = OpD( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 8, 8, 1000 ) ), MAT_MATTE_BLACK, mat );
@@ -245,9 +245,6 @@ PS
     PS_OUTPUT MainPs( const PS_INPUT i )
     {
         PS_OUTPUT o;
-        // o.vColor0 = hash2( i.vPositionPs.xy );
-        // return o;
-
         o.vColor0 = float4( 0, 0, 0, 0 );
 
         o.vColor0 = RayMarchingPass( i, o.vColor0 );

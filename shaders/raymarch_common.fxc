@@ -1,5 +1,5 @@
 //================================================================================
-// Generic utility functions
+// Generic utility functions (mostly noise)
 // ================================================================================
 
 float3 SrgbGammaToLinear(float3 c) 
@@ -10,41 +10,53 @@ float3 SrgbGammaToLinear(float3 c)
 
 Texture2D<float4> g_BlueNoise< Channel( RGBA, "Aniso(AlphaTexture)", Srgb ); AsBlueNoise(true); >;
 SamplerState g_BlueNoise_s< Filter(NEAREST); AddressU(MIRROR); AddressV(MIRROR); AddressW(MIRROR); >;
-float hash2( float2 n ) 
+
+float Hash2( float2 n ) 
 {
     float2 uv = n * 0.05;
     float4 tx = Tex2DLevel( g_BlueNoise, uv, 2 ).xyzx;
     return tx.x;
 }
 
-#define SMOOTH_NOISE_MODE 0
-float smoothNoise(float2 uv)
+float Hash( float n )
 {
+    return Hash2( n.xx );
+}
+
+#define SMOOTH_NOISE_MODE 0
+
+float SmoothNoise(float2 uv)
+{
+
 #if SMOOTH_NOISE_MODE
+
     float2 sw = float2(floor(uv.x),floor(uv.y));
     float2 se = float2( ceil(uv.x),floor(uv.y));
     float2 nw = float2(floor(uv.x), ceil(uv.y));
     float2 ne = float2( ceil(uv.x), ceil(uv.y));
     
     float2 interp = smoothstep(0., 1., frac(uv));
-    float s = lerp(hash2(sw),hash2(se),interp.x);
-    float n = lerp(hash2(nw),hash2(ne),interp.x);
+    float s = lerp(Hash2(sw),Hash2(se),interp.x);
+    float n = lerp(Hash2(nw),Hash2(ne),interp.x);
     return lerp(s, n, interp.y);
+
 #else
+
     float2 id = floor(uv);
     float2 fr = frac(uv);
 
     fr = fr*fr*(3.0 - 2.0*fr);
 
-    float bl = hash2(id);
-    float br = hash2(id + float2(1.0, 0.0));
+    float bl = Hash2(id);
+    float br = Hash2(id + float2(1.0, 0.0));
     float b  = lerp(bl, br, fr.x);
 
-    float tl = hash2(id + float2(0.0, 1.0));
-    float tr = hash2(id + float2(1.0, 1.0));
+    float tl = Hash2(id + float2(0.0, 1.0));
+    float tr = Hash2(id + float2(1.0, 1.0));
     float t  = lerp(tl, tr, fr.x);
 
     return lerp(b, t, fr.y);
+
 #endif
 }
 
@@ -56,41 +68,32 @@ float TerrainNoise( float2 uv )
     float2 u = uv * scale;
 
     p = u * 1.0;
-    v += smoothNoise( p ) * .125;
+    v += SmoothNoise( p ) * .125;
     p = u * 0.5;
-    v += smoothNoise( p ) * .25;
+    v += SmoothNoise( p ) * .25;
     p = u * 0.05;
-    v += smoothNoise( p ) * .5;
+    v += SmoothNoise( p ) * .5;
     p = u * 0.05;
-    v += smoothNoise( p ) * 2;
+    v += SmoothNoise( p ) * 2;
     p = u * 0.0125;
-    v += smoothNoise( p ) * 16;
+    v += SmoothNoise( p ) * 16;
     p = u * 0.005;
-    v += smoothNoise( p ) * 128;
+    v += SmoothNoise( p ) * 128;
 
     // Underlying base
     p = u * 0.001;
-    v += smoothNoise( p ) * 1024;
+    v += SmoothNoise( p ) * 1024;
     p = u * 0.00025;
-    v += smoothNoise( p ) * 2048;
+    v += SmoothNoise( p ) * 2048;
 
     return v / scale;
 }
 
-#define fbmMatrix float3x3( 0.00,  0.80,  0.60, \
-                -0.80,  0.36, -0.48, \
-                -0.60, -0.48,  0.64)
-float hash(float n)
-{
-    float2 uv = n.xx * 0.05;
-    float4 tx = Tex2DLevel( g_BlueNoise, uv, 2 ).xyzx;
-    return tx.x;
-}
+#define FBM_MATRIX float3x3( 0.00,  0.80,  0.60, \
+                            -0.80,  0.36, -0.48, \
+                            -0.60, -0.48,  0.64)
 
-///
-/// Noise function
-///
-float _noise(in float3 x)
+float Noise3D(in float3 x)
 {
     float3 p = floor(x);
     float3 f = frac(x);
@@ -99,21 +102,24 @@ float _noise(in float3 x)
     
     float n = p.x + p.y * 57.0 + 113.0 * p.z;
     
-    float res = lerp(lerp(lerp(hash(n +   0.0), hash(n +   1.0), f.x),
-                        lerp(hash(n +  57.0), hash(n +  58.0), f.x), f.y),
-                    lerp(lerp(hash(n + 113.0), hash(n + 114.0), f.x),
-                        lerp(hash(n + 170.0), hash(n + 171.0), f.x), f.y), f.z);
+    float res = lerp(
+        lerp(lerp(  Hash(n +   0.0), Hash(n +   1.0), f.x),
+        lerp(       Hash(n +  57.0), Hash(n +  58.0), f.x), f.y),
+        lerp(lerp(  Hash(n + 113.0), Hash(n + 114.0), f.x),
+        lerp(       Hash(n + 170.0), Hash(n + 171.0), f.x), f.y)
+    , f.z);
     return res;
 }
 
-float fbm( float3 p )
+float FullBrownianMotion( float3 p )
 {
     float f;
-    f = 0.5f * _noise( p );
-    p = mul( fbmMatrix, p ) * 2.02;
-    f += 0.25f * _noise( p );
-    p = mul( fbmMatrix, p ) * 2.03;
-    f += 0.125f * _noise( p );
+
+    f = 0.5f * Noise3D( p );
+    p = mul( FBM_MATRIX, p ) * 2.02;
+    f += 0.25f * Noise3D( p );
+    p = mul( FBM_MATRIX, p ) * 2.03;
+    f += 0.125f * Noise3D( p );
 
     return f;
 }
