@@ -19,7 +19,7 @@ namespace GodRealm
 				vel *= 5f;
 
 			if ( Input.Down( InputButton.Duck ) )
-				vel *= 100f;
+				vel *= 0.25f;
 
 			vel *= 50;
 

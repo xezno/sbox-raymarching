@@ -9,9 +9,15 @@ float Sphere( float p, float4 s )
     return length( p - s.xyz ) - s.w;
 }
 
+// #define NORMAL_TERRAIN
 float Terrain( float3 p )
-{
+{    
+#ifdef NORMAL_TERRAIN
     return p.z - TerrainNoise( p.xy );
+#else
+//return -0.4 + ( fbm( p * 0.1 ) * 0.5 ) + ( fbm( p * 0.1 ) * 0.5 );
+    return fbm( p * 0.1 ) - 0.4;
+#endif
 }
 
 float Box( float3 p, float3 b )

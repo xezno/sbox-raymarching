@@ -79,9 +79,6 @@ PS
     int ResolutionDownSampling< UiGroup(""); Default( 1 ); Range( 1, 16 ); >;
     IntAttribute( ResolutionDownSampling, true );
 
-    // float4 I< UiGroup(""); >;
-    // Float4Attribute( I, true );
-
     // Create our output
     struct PS_OUTPUT
     {
@@ -97,17 +94,21 @@ PS
     #include "raymarch_basic.fxc"
     #include "raymarch_sdf.fxc"
     // ================================================================================
-    
+
+// Specular lighting makes no sense here, but you can enable it below    
+//#define SPECULAR
     float GetLight( float3 p, float3 camPos, float3 n, Material mat )
     { 
         // Lambert shading
         float3 l = g_vSunLightDir;
         float fLambert = ShadeDiffuse( n, l );
 
+#ifdef SPECULAR
         // Specular
         float3 v = normalize( camPos - p );
         float3 h = normalize( l + v );
         fLambert += ShadeSpecular( n, h, mat.specularPow ) * mat.specularAmt;
+#endif
     
         return fLambert;
     }
@@ -118,12 +119,14 @@ PS
 
         mat = MAT_ERROR;
 
-        d = OpU( d, Terrain( p ), MAT_MATTE_BLACK, mat );
-        d = OpU( d, p.z - 8 + ( smoothNoise( ( p.xy * 2 ) + g_flTime.xx ) * 0.025 ), MAT_WATER, mat );
+        d = OpU( d, Terrain( p ), MAT_MUD, mat );
+        d = OpD( d, -p.z, MAT_GRASS, mat );
+        d = OpU( d, p.z+16, MAT_MUD, mat );
+        // d = OpU( d, p.z - 8 + ( smoothNoise( ( p.xy * 2 ) + g_flTime.xx ) * 0.025 ), MAT_WATER, mat );
 
-        // Obelisk
-        // d = OpD( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 8, 8, 1000 ) ), MAT_MATTE_BLACK, mat );
-        // d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
+        // Spawn obelisk
+        d = OpD( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 8, 8, 1000 ) ), MAT_MATTE_BLACK, mat );
+        d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
 
         return d;
     }
@@ -146,10 +149,8 @@ PS
     }
 
     
-    #define GROUND_COLOR float3(0.7, 0.5, 0.3).xyzx
-    #define MOUNTAIN_COLOR float3(0.6, 0.55, 0.5).xyzx
-    #define GRASS_COLOR float3(0.2, 0.28, 0.16).xyzx
-    #define MAX_HEIGHT 64
+    #define GRASS_COLOR float4( 0.416, 0.6, 0.224, 1.0 )
+    #define MAX_HEIGHT -64
 
     //
     // Main ray marched scene
@@ -175,8 +176,10 @@ PS
         float3 ro = ray.pos;
         float3 rd = ray.dir;
 
+
+        float3 resultRd;
         Material mat;
-        float d = RayMarch( ro, rd, mat );
+        float d = RayMarch( ro, rd, mat, resultRd );
 
         // Sun calc
         float sun = clamp( dot( g_vSunLightDir, rd ), 0.0, 1.0 );
@@ -184,23 +187,15 @@ PS
         //
         // Lighting / render calculations
         // 
-        float3 p = ro + rd * d;
+        float3 p = ro + resultRd * d;
         float3 n = GetNormal( p );
         float fLambert = GetLight( p, cameraPosition, n, mat );
 
-        if ( length( mat.color ) == length( MAT_MATTE_BLACK.color ) )
-        {
-            float height = p.z / MAX_HEIGHT;
-
-            float pC = smoothstep( 0.0, 0.5, height );
-            float4 col = lerp( MOUNTAIN_COLOR, GROUND_COLOR, pC );
-            mat.color = col;
-
-            float snow = smoothstep( 0.8 - height, 1.0, GetNormal( p.xyz ).z * GetNormal( p.xyz ).z );
-            mat.color = lerp( col, float4( 1, 1, 1, 1 ), snow );
-        }
+        float grassAmt = smoothstep( 0.8, 1.0, GetNormal( p.xyz ).z * GetNormal( p.xyz ).z * 2 );
+        mat.color = lerp( mat.color, GRASS_COLOR, grassAmt );
 
         inColor = ( mat.color * AmbientColor.xyzx * 1.1 ) + ( mat.color * fLambert * 0.6 );
+        inColor *= 1.3333;
 
         // AO
         inColor = lerp( inColor * 0.8, inColor, GetAO( p, n ) );
@@ -216,10 +211,12 @@ PS
         inColor = lerp( inColor, float4( fogCol, 1 ), fogMul );
 
         
-        inColor.xyz += ( 0.05 * g_vSunLightColor.xyz * pow( sun, 32.0 ) ) * pow( fogMul, 8 );
-        inColor.xyz += ( 1.0 * g_vSunLightColor.xyz * pow( sun, 2048.0 ) ) * pow( fogMul, 8 );
+        inColor.xyz += ( 0.05 * g_vSunLightColor.xyz * pow( sun, 32.0 ) ) * pow( fogMul, 12 );
+        inColor.xyz += ( 1.0 * g_vSunLightColor.xyz * pow( sun, 2048.0 ) ) * pow( fogMul, 12 );
 
         inColor = smoothstep( 0.15, 1.1, inColor );
+
+        // return mat.color;
 
         return SrgbGammaToLinear( pow( inColor.xyz, 1.1 ) ).xyzx;
     }

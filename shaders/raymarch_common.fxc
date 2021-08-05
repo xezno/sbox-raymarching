@@ -80,15 +80,40 @@ float TerrainNoise( float2 uv )
 #define fbmMatrix float3x3( 0.00,  0.80,  0.60, \
                 -0.80,  0.36, -0.48, \
                 -0.60, -0.48,  0.64)
+float hash(float n)
+{
+    float2 uv = n.xx * 0.05;
+    float4 tx = Tex2DLevel( g_BlueNoise, uv, 2 ).xyzx;
+    return tx.x;
+}
+
+///
+/// Noise function
+///
+float _noise(in float3 x)
+{
+    float3 p = floor(x);
+    float3 f = frac(x);
+    
+    f = f * f * (3.0 - 2.0 * f);
+    
+    float n = p.x + p.y * 57.0 + 113.0 * p.z;
+    
+    float res = lerp(lerp(lerp(hash(n +   0.0), hash(n +   1.0), f.x),
+                        lerp(hash(n +  57.0), hash(n +  58.0), f.x), f.y),
+                    lerp(lerp(hash(n + 113.0), hash(n + 114.0), f.x),
+                        lerp(hash(n + 170.0), hash(n + 171.0), f.x), f.y), f.z);
+    return res;
+}
 
 float fbm( float3 p )
 {
     float f;
-    f = 0.5f * smoothNoise( p );
+    f = 0.5f * _noise( p );
     p = mul( fbmMatrix, p ) * 2.02;
-    f += 0.25f * smoothNoise( p );
+    f += 0.25f * _noise( p );
     p = mul( fbmMatrix, p ) * 2.03;
-    f += 0.125f * smoothNoise( p );
+    f += 0.125f * _noise( p );
 
     return f;
 }

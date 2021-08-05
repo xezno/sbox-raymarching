@@ -20,7 +20,7 @@ Material MakeMaterial( float4 color, float specularAmt = 1, int specularPow = 51
 }
 
 // Grass color
-#define MAT_GRASS   MakeMaterial( float4( 0.31, 0.7, 0.28, 1.0 ), 0.0f )
+#define MAT_GRASS   MakeMaterial( float4( 0.416, 0.6, 0.224, 1.0 ), 0.0f )
 
 // Sand color
 #define MAT_SAND    MakeMaterial( float4( 1.0, 1.0, 0.0, 1.0 ), 1.0, 64 )
@@ -37,4 +37,4 @@ Material MakeMaterial( float4 color, float specularAmt = 1, int specularPow = 51
 
 #define MAT_CLOUD   MakeMaterial( float4( 1, 1, 1, 0.5 ), 0, 1 )
 
-#define MAT_MUD     MakeMaterial( float4( 0.439, 0.329, 0.243, 1.0 ), 0.0f )
+#define MAT_MUD     MakeMaterial( float4( 0.267, 0.251, 0.2, 1 )*2, 0.0f )
