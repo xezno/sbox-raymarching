@@ -4,15 +4,21 @@
 // ================================================================================
 
 #define PI 3.1415925359
-//#define MAX_STEPS 128
-#define MAX_STEPS 128
-//#define MAX_DIST 128
-#define MAX_DIST 32
-//#define SURFACE_DIST .025
-#define SURFACE_DIST .001
+#define SURFACE_DIST 0.1
 #define EPS 0.005
 
+int MaxSteps< UiGroup(""); UiType( Slider ); Default( 128 ); Range( 1, 4096 ); >;
+IntAttribute( MaxSteps, true );
+
+int MaxDist< UiGroup(""); UiType( Slider ); Default( 32 ); Range( 1, 32768 ); UiStep( 128 ); >;
+IntAttribute( MaxDist, true );
+
 float GetDist( float3 p, out Material mat ); // Redefine this in your own file!!!
+
+float SinAdj( float offset = 0 ) 
+{
+    return ( 0.5 * sin( g_flTime * 4 + offset ) + 0.5 );
+}
 
 float3 GetNormal( float3 p )
 {
@@ -31,12 +37,14 @@ float3 GetNormal( float3 p )
 float RayMarch( float3 ro, float3 rd, out Material mat ) 
 {
     float dO = 0;
-    for (int i = 0; i < MAX_STEPS; i++)
+    for (int i = 0; i < MaxSteps; i++)
     { 
         float3 p = (rd * dO) + ro;
         float ds = GetDist( p, mat );
-        dO += ds;
-        if ( dO > MAX_DIST || ds < SURFACE_DIST )
+        dO += ds * 0.25;
+
+        ro -= float3( 0, 0, 0.001 );
+        if ( dO > MaxDist || ds < SURFACE_DIST )
             break;
     }
     return dO;
@@ -84,5 +92,30 @@ float OpU( float a, float b, Material mat, inout Material matO )
     if ( b - d < EPS )
         matO = mat;
     
+    return d;
+}
+
+
+// Intersect Operation
+float OpI( float a, float b, Material mat, inout Material matO )
+{
+    float d = max( a, b );
+    matO = matO;
+
+    if ( b - d > EPS )
+        matO = mat;
+
+    return d;
+}
+
+// Diff Operation
+float OpD( float a, float b, Material mat, inout Material matO )
+{
+    float d = max( a, -b );
+    matO = matO;
+
+    if ( b - d > EPS )
+        matO = mat;
+
     return d;
 }

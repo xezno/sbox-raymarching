@@ -8,7 +8,7 @@ namespace GodRealm
 		{
 			SetModel( "models/citizen/citizen.vmdl" ); // This doesn't really matter cos we don't see it
 			
-			Controller = new NoclipController();
+			Controller = new NoClipController();
 			Animator = new StandardPlayerAnimator();
 			Camera = new FirstPersonCamera();
 
