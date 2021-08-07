@@ -4,7 +4,7 @@
 // ================================================================================
 
 #define PI 3.1415925359
-#define SURFACE_DIST 0.025
+#define SURFACE_DIST 0.05
 #define EPS 0.005
 
 int MaxSteps< UiGroup(""); UiType( Slider ); Default( 128 ); Range( 1, 4096 ); >;
@@ -34,7 +34,7 @@ float3 GetNormal( float3 p )
     return normalize( n );
 }
 
-float RayMarch( float3 ro, float3 rd, out Material mat, out float3 resultRd ) 
+float RayMarch( float3 ro, float3 rd, out Material mat, out float3 resultRd, float stepSizeMul = 1.0f ) 
 {
     float dO = 0;
 
@@ -42,7 +42,7 @@ float RayMarch( float3 ro, float3 rd, out Material mat, out float3 resultRd )
     { 
         float3 p = (rd * dO) + ro;
         float ds = GetDist( p, mat );
-        dO += ds * 0.5;
+        dO += ds * stepSizeMul;
         rd += float3( 0, 0, 0.0005 * ds );
         if ( dO > MaxDist || ds < SURFACE_DIST )
             break;

@@ -109,6 +109,13 @@ PS
         float3 h = normalize( l + v );
         fLambert += ShadeSpecular( n, h, mat.specularPow ) * mat.specularAmt;
 #endif
+
+        Material _;
+        float3 resultRd;
+        float d = RayMarch( p + n * SURFACE_DIST * 4, l, _, resultRd ); 
+        
+        if ( d < length( l ) ) 
+            fLambert = -0.5;
     
         return fLambert;
     }
@@ -121,12 +128,13 @@ PS
 
         d = OpU( d, Terrain( p ), MAT_MUD, mat );
         d = OpD( d, -p.z, MAT_GRASS, mat );
-        // d = OpU( d, p.z+32, MAT_MUD, mat );
+
+        // d = OpU( d, p.z, MAT_GRASS, mat );
         // d = OpU( d, p.z - 8 + ( SmoothNoise( ( p.xy * 2 ) + g_flTime.xx ) * 0.025 ), MAT_WATER, mat );
 
         // Spawn obelisk
         // d = OpD( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 8, 8, 1000 ) ), MAT_MATTE_BLACK, mat );
-        // d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
+        d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
 
         return d;
     }
@@ -190,7 +198,7 @@ PS
         float3 n = GetNormal( p );
         float fLambert = GetLight( p, cameraPosition, n, mat );
 
-        float grassAmt = smoothstep( 0.8, 1.0, GetNormal( p.xyz ).z * GetNormal( p.xyz ).z * 2 );
+        float grassAmt = smoothstep( 0, 1.0, GetNormal( p.xyz ).z * 12 );
         mat.color = lerp( mat.color, GRASS_COLOR, grassAmt );
 
         inColor = ( mat.color * AmbientColor.xyzx * 1.1 ) + ( mat.color * fLambert * 0.6 );
