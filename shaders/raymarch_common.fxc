@@ -23,29 +23,12 @@ float Hash( float n )
     return Hash2( n.xx );
 }
 
-#define SMOOTH_NOISE_MODE 0
-
 float SmoothNoise(float2 uv)
 {
-
-#if SMOOTH_NOISE_MODE
-
-    float2 sw = float2(floor(uv.x),floor(uv.y));
-    float2 se = float2( ceil(uv.x),floor(uv.y));
-    float2 nw = float2(floor(uv.x), ceil(uv.y));
-    float2 ne = float2( ceil(uv.x), ceil(uv.y));
-    
-    float2 interp = smoothstep(0., 1., frac(uv));
-    float s = lerp(Hash2(sw),Hash2(se),interp.x);
-    float n = lerp(Hash2(nw),Hash2(ne),interp.x);
-    return lerp(s, n, interp.y);
-
-#else
-
     float2 id = floor(uv);
     float2 fr = frac(uv);
 
-    fr = fr*fr*(3.0 - 2.0*fr);
+    fr = fr * fr * (3.0 - 2.0 * fr);
 
     float bl = Hash2(id);
     float br = Hash2(id + float2(1.0, 0.0));
@@ -56,37 +39,6 @@ float SmoothNoise(float2 uv)
     float t  = lerp(tl, tr, fr.x);
 
     return lerp(b, t, fr.y);
-
-#endif
-}
-
-float TerrainNoise( float2 uv ) 
-{
-    const int scale = 128;
-    float v = 0;
-    float2 p;
-    float2 u = uv * scale;
-
-    p = u * 1.0;
-    v += SmoothNoise( p ) * .125;
-    p = u * 0.5;
-    v += SmoothNoise( p ) * .25;
-    p = u * 0.05;
-    v += SmoothNoise( p ) * .5;
-    p = u * 0.05;
-    v += SmoothNoise( p ) * 2;
-    p = u * 0.0125;
-    v += SmoothNoise( p ) * 16;
-    p = u * 0.005;
-    v += SmoothNoise( p ) * 128;
-
-    // Underlying base
-    p = u * 0.001;
-    v += SmoothNoise( p ) * 1024;
-    p = u * 0.00025;
-    v += SmoothNoise( p ) * 2048;
-
-    return v / scale;
 }
 
 #define FBM_MATRIX float3x3( 0.00,  0.80,  0.60, \

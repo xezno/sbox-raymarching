@@ -8,25 +8,21 @@ HEADER
     DevShader = true;
     CompileTargets = ( IS_SM_50 && ( PC || VULKAN ) );
     Description = "Basic ray marching";
-    Version = 3141592653;
+    Version = 1;
 }
 
 MODES
 {
-    VrForward(); // The shading mode we'll use. Typically you'll keep this for forward rendering
+    VrForward();
 }
 
 FEATURES
 {
     // Features MUST begin with F_
-    // Feature(F_ENABLE_DEPTH, 0..1, "Category name");
 }
 
 COMMON
 {
-    // Definitions placed in here will be accessed to all defined shdaer types below.
-    // Typically you'd define your pixel shader input here as well as all the constbuffers you'll be using.
-
     // Required by re_system & re_vr_shared_standard_vs_code
     #include "includes/re_Globals.fxc"
     #include "includes/re_PerViewConstantBuffer.fxc"
@@ -91,34 +87,11 @@ PS
     #include "raymarch_dithering.fxc"
     #include "raymarch_shading.fxc"
     #include "raymarch_materials.fxc"
-    #include "raymarch_basic.fxc"
     #include "raymarch_sdf.fxc"
+    #include "raymarch_basic.fxc"
     // ================================================================================
-
-// Specular lighting makes no sense here, but you can enable it below    
-//#define SPECULAR
-    float GetLight( float3 p, float3 camPos, float3 n, Material mat )
-    { 
-        // Lambert shading
-        float3 l = g_vSunLightDir;
-        float fLambert = ShadeDiffuse( n, l );
-
-#ifdef SPECULAR
-        // Specular
-        float3 v = normalize( camPos - p );
-        float3 h = normalize( l + v );
-        fLambert += ShadeSpecular( n, h, mat.specularPow ) * mat.specularAmt;
-#endif
-
-        Material _;
-        float3 resultRd;
-        float d = RayMarch( p + n * SURFACE_DIST * 4, l, _, resultRd ); 
-        
-        if ( d < length( l ) ) 
-            fLambert = -0.5;
     
-        return fLambert;
-    }
+    #define GRASS_COLOR float4( 0.416, 0.6, 0.224, 1.0 )
 
     float GetDist( float3 p, out Material mat ) 
     {
@@ -134,27 +107,6 @@ PS
 
         return d;
     }
-
-        
-    float GetAO( in float3 pos, in float3 nor )
-    {
-        Material _;
-        float occ = 0.0;
-        float sca = 1.0;
-        for( int i = 0; i < 5; i++ )
-        {
-            float h = 0.01 + 0.12 * float( i ) / 2;
-            float d = GetDist( pos + h * nor, _ );
-            occ += (h - d) * sca;
-            sca *= 0.95;
-            if( occ > 0.35 ) break;
-        }
-        return clamp( 1.0 - 3.0 * occ, 0, 1.0 ) * ( 0.5 + 0.5 * nor.y );
-    }
-
-    
-    #define GRASS_COLOR float4( 0.416, 0.6, 0.224, 1.0 )
-    #define MAX_HEIGHT -64
 
     //
     // Main ray marched scene
@@ -218,7 +170,6 @@ PS
         inColor = smoothstep( 0.15, 1.1, inColor );
 
         return pow( inColor, 0.6 );
-        // return SrgbGammaToLinear( pow( inColor.xyz, 1.1 ) ).xyzx;
     }
 
     //

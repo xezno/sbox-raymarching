@@ -7,6 +7,12 @@
 #define SURFACE_DIST 0.025
 #define EPS 0.005
 
+struct Ray 
+{
+    float3 pos;
+    float3 dir;
+};
+
 int MaxSteps< UiGroup(""); UiType( Slider ); Default( 128 ); Range( 1, 4096 ); >;
 IntAttribute( MaxSteps, true );
 
@@ -14,25 +20,6 @@ int MaxDist< UiGroup(""); UiType( Slider ); Default( 32 ); Range( 1, 32768 ); Ui
 IntAttribute( MaxDist, true );
 
 float GetDist( float3 p, out Material mat ); // Redefine this in your own file!!!
-
-float SinAdj( float offset = 0 ) 
-{
-    return ( 0.5 * sin( g_flTime * 4 + offset ) + 0.5 );
-}
-
-float3 GetNormal( float3 p )
-{
-    Material _;
-    float d = GetDist( p, _ );
-    float2 e = float2( EPS, 0 );
-    float3 n = d - float3(
-        GetDist( p - e.xyy, _ ),  
-        GetDist( p - e.yxy, _ ),
-        GetDist( p - e.yyx, _ )
-    );
-
-    return normalize( n );
-}
 
 float RayMarch( float3 ro, float3 rd, out Material mat, out float3 resultRd, float stepSizeMul = 1.0f ) 
 {
@@ -52,11 +39,60 @@ float RayMarch( float3 ro, float3 rd, out Material mat, out float3 resultRd, flo
     return dO;
 }
 
-struct Ray 
+float3 GetNormal( float3 p )
 {
-    float3 pos;
-    float3 dir;
-};
+    Material _;
+    float d = GetDist( p, _ );
+    float2 e = float2( EPS, 0 );
+    float3 n = d - float3(
+        GetDist( p - e.xyy, _ ),  
+        GetDist( p - e.yxy, _ ),
+        GetDist( p - e.yyx, _ )
+    );
+
+    return normalize( n );
+}
+
+// Specular lighting makes no sense here, but you can enable it below
+//#define SPECULAR
+float GetLight( float3 p, float3 camPos, float3 n, Material mat )
+{ 
+    // Lambert shading
+    float3 l = g_vSunLightDir;
+    float fLambert = ShadeDiffuse( n, l );
+
+#ifdef SPECULAR
+    // Specular
+    float3 v = normalize( camPos - p );
+    float3 h = normalize( l + v );
+    fLambert += ShadeSpecular( n, h, mat.specularPow ) * mat.specularAmt;
+#endif
+
+    Material _;
+    float3 resultRd;
+    float d = RayMarch( p + n * SURFACE_DIST * 4, l, _, resultRd ); 
+    
+    if ( d < length( l ) ) 
+        fLambert = -0.5;
+
+    return fLambert;
+}
+
+float GetAO( in float3 pos, in float3 nor )
+{
+    Material _;
+    float occ = 0.0;
+    float sca = 1.0;
+    for( int i = 0; i < 5; i++ )
+    {
+        float h = 0.01 + 0.12 * float( i ) / 2;
+        float d = GetDist( pos + h * nor, _ );
+        occ += (h - d) * sca;
+        sca *= 0.95;
+        if( occ > 0.35 ) break;
+    }
+    return clamp( 1.0 - 3.0 * occ, 0, 1.0 ) * ( 0.5 + 0.5 * nor.y );
+}
 
 Ray CreateRay(float2 uv, float3 camPos, float3 lookAt, float zoom) 
 {
@@ -84,6 +120,10 @@ void SetupCamera( float2 uvs, float fov, out float Px, out float Py )
     Py = (2 * ((snappedUvs.y + 0.5) / g_vRenderTargetSize.y) - 1) * tan( fov / 2 * PI / 180 );
     Py = -Py;
 }
+
+//
+// Operations
+//
 
 // Union Operation
 float OpU( float a, float b, Material mat, inout Material matO )

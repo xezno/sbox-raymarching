@@ -9,18 +9,11 @@ float Sphere( float3 p, float r )
     return length( p ) - r;
 }
 
-// #define NORMAL_TERRAIN
 float Terrain( float3 p )
-{    
-#ifdef NORMAL_TERRAIN
-    return p.z - TerrainNoise( p.xy );
-#else
+{
     float a = FullBrownianMotion( p * 0.1 ) - 0.45;
     float b = ( FullBrownianMotion( p * 3.0 ) ) * 50;
-    // float c = ( FullBrownianMotion( p * 8.0 ) ) * 25;
-
     return ( a * b ) / 2;
-#endif
 }
 
 float Box( float3 p, float3 b )
