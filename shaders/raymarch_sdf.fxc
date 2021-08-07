@@ -4,9 +4,9 @@
 // ================================================================================
 
 // I got this from somewhere but I can't remember where.
-float Sphere( float p, float4 s )
+float Sphere( float3 p, float r )
 {
-    return length( p - s.xyz ) - s.w;
+    return length( p ) - r;
 }
 
 // #define NORMAL_TERRAIN

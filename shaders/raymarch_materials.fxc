@@ -33,7 +33,7 @@ Material MakeMaterial( float4 color, float specularAmt = 1, int specularPow = 51
 
 #define MAT_ERROR   MakeMaterial( float4( 1.0, 0.0, 0.0, 1.0 ) )
 
-#define MAT_MATTE_BLACK MakeMaterial( float4( 0.6, 0.61, 0.59, 1.0 ), 0, 1024 )
+#define MAT_MATTE_BLACK MakeMaterial( float4( 0.1, 0.11, 0.09, 1.0 ), 0, 1024 )
 
 #define MAT_CLOUD   MakeMaterial( float4( 1, 1, 1, 0.5 ), 0, 1 )
 

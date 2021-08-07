@@ -4,7 +4,7 @@
 // ================================================================================
 
 #define PI 3.1415925359
-#define SURFACE_DIST 0.05
+#define SURFACE_DIST 0.025
 #define EPS 0.005
 
 int MaxSteps< UiGroup(""); UiType( Slider ); Default( 128 ); Range( 1, 4096 ); >;

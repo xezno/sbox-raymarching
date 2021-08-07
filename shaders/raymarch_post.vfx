@@ -129,11 +129,7 @@ PS
         d = OpU( d, Terrain( p ), MAT_MUD, mat );
         d = OpD( d, -p.z, MAT_GRASS, mat );
 
-        // d = OpU( d, p.z, MAT_GRASS, mat );
-        // d = OpU( d, p.z - 8 + ( SmoothNoise( ( p.xy * 2 ) + g_flTime.xx ) * 0.025 ), MAT_WATER, mat );
-
-        // Spawn obelisk
-        // d = OpD( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 8, 8, 1000 ) ), MAT_MATTE_BLACK, mat );
+        d = OpD( d, Sphere( p - float3( 10.0, 10.0, 3 ), 32 ), MAT_SAND, mat );
         d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
 
         return d;
