@@ -1,6 +1,6 @@
 # s&box raymarching demo
 
-This is a basic work-in-progress 90s-style raymarching demo / proof-of-concept.
+This is a basic work-in-progress raymarching demo / proof-of-concept.
 
 If you have s&box, you can play a version of it [here](https://explorer.sboxed.com/assets/gamemode/alex.godrealm) (or just search for "Alex's God Realm" in-game).
 
