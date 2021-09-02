@@ -2,14 +2,7 @@
 
 This is a basic work-in-progress 90s-style raymarching demo / proof-of-concept.
 
-## Goals
-
-Here's what I want to eventually achieve with this (none of this is implemented yet):
-
-- Voxel rendering
-- Physically-based sky rendering
-- Virtually infinite\* render distance *(\*not actually infinite, but far enough that world curvature takes shape)*
-- Procedurally generated flora - trees, rocks, etc.
+If you have s&box, you can play a version of it [here](https://explorer.sboxed.com/assets/gamemode/alex.godrealm) (or just search for "Alex's God Realm" in-game).
 
 ## Screenshots
 
