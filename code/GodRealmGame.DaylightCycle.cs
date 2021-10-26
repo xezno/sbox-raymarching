@@ -13,9 +13,6 @@ namespace GodRealm
 		[Event.Tick.Server]
 		public void OnDaylightCycleTick()
 		{
-			if ( !TimeEnabled )
-				return;
-			
 			float gameSecondsPerRtSecond = 72;
 
 			float gameSecondsPerTick = gameSecondsPerRtSecond / Global.TickRate;
@@ -61,15 +58,6 @@ namespace GodRealm
 					CurrentTimeString = $"{hours:D2}:{minutes:D2}:{seconds:D2}";
 				}
 			}
-		}
-
-		[Net] public bool TimeEnabled { get; set; } = true;
-
-		[ServerCmd( "time_enabled" )]
-		public static void SetEnabledCmd( bool enabled )
-		{
-			var instance = (Game.Current as GodRealmGame);
-			instance.TimeEnabled = true;
 		}
 
 		[ServerCmd( "time_set" )]

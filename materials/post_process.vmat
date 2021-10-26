@@ -4,6 +4,10 @@ Layer0
 {
 	shader "raymarch_post.vfx"
 
+	AmbientColor "[0.756863 0.858824 1.000000 0.000000]"
 	DitheringEnabled "1"
-	SkyColor "[0.270588 0.803922 0.937255 0.000000]"
+	MaxDist "32"
+	MaxSteps "128"
+	ResolutionDownSampling "2"
+	SkyColor "[0.741176 0.945098 1.000000 0.000000]"
 }

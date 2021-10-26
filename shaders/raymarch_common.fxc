@@ -1,77 +1,9 @@
 //================================================================================
-// Generic utility functions (mostly noise)
+// Generic utility functions
 // ================================================================================
 
 float3 SrgbGammaToLinear(float3 c) 
 {
     c = max(c, 0);
     return c < 0.04045f ? c * 0.0773993805 : pow(c * 0.9478672986 + 0.0521327014, 2.4);
-}
-
-Texture2D<float4> g_BlueNoise< Channel( RGBA, "Aniso(AlphaTexture)", Srgb ); AsBlueNoise(true); >;
-SamplerState g_BlueNoise_s< Filter(NEAREST); AddressU(MIRROR); AddressV(MIRROR); AddressW(MIRROR); >;
-
-float Hash2( float2 n ) 
-{
-    float2 uv = n * 0.05;
-    float4 tx = Tex2DLevel( g_BlueNoise, uv, 2 ).xyzx;
-    return tx.x;
-}
-
-float Hash( float n )
-{
-    return Hash2( n.xx );
-}
-
-float SmoothNoise(float2 uv)
-{
-    float2 id = floor(uv);
-    float2 fr = frac(uv);
-
-    fr = fr * fr * (3.0 - 2.0 * fr);
-
-    float bl = Hash2(id);
-    float br = Hash2(id + float2(1.0, 0.0));
-    float b  = lerp(bl, br, fr.x);
-
-    float tl = Hash2(id + float2(0.0, 1.0));
-    float tr = Hash2(id + float2(1.0, 1.0));
-    float t  = lerp(tl, tr, fr.x);
-
-    return lerp(b, t, fr.y);
-}
-
-#define FBM_MATRIX float3x3( 0.00,  0.80,  0.60, \
-                            -0.80,  0.36, -0.48, \
-                            -0.60, -0.48,  0.64)
-
-float Noise3D(in float3 x)
-{
-    float3 p = floor(x);
-    float3 f = frac(x);
-    
-    f = f * f * (3.0 - 2.0 * f);
-    
-    float n = p.x + p.y * 57.0 + 113.0 * p.z;
-    
-    float res = lerp(
-        lerp(lerp(  Hash(n +   0.0), Hash(n +   1.0), f.x),
-        lerp(       Hash(n +  57.0), Hash(n +  58.0), f.x), f.y),
-        lerp(lerp(  Hash(n + 113.0), Hash(n + 114.0), f.x),
-        lerp(       Hash(n + 170.0), Hash(n + 171.0), f.x), f.y)
-    , f.z);
-    return res;
-}
-
-float FullBrownianMotion( float3 p )
-{
-    float f;
-
-    f = 0.5f * Noise3D( p );
-    p = mul( FBM_MATRIX, p ) * 2.02;
-    f += 0.25f * Noise3D( p );
-    p = mul( FBM_MATRIX, p ) * 2.03;
-    f += 0.125f * Noise3D( p );
-
-    return f;
 }

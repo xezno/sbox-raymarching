@@ -8,21 +8,25 @@ HEADER
     DevShader = true;
     CompileTargets = ( IS_SM_50 && ( PC || VULKAN ) );
     Description = "Basic ray marching";
-    Version = 1;
+    Version = 3141592653;
 }
 
 MODES
 {
-    VrForward();
+    VrForward(); // The shading mode we'll use. Typically you'll keep this for forward rendering
 }
 
 FEATURES
 {
     // Features MUST begin with F_
+    // Feature(F_ENABLE_DEPTH, 0..1, "Category name");
 }
 
 COMMON
 {
+    // Definitions placed in here will be accessed to all defined shdaer types below.
+    // Typically you'd define your pixel shader input here as well as all the constbuffers you'll be using.
+
     // Required by re_system & re_vr_shared_standard_vs_code
     #include "includes/re_Globals.fxc"
     #include "includes/re_PerViewConstantBuffer.fxc"
@@ -52,6 +56,7 @@ VS
 
         o.vPositionPs = float4( i.vPositionOs, 1 ); // We're doing post-processing, so stay with the camera at all times
         return o;
+
     }
 }
 
@@ -75,6 +80,9 @@ PS
     int ResolutionDownSampling< UiGroup(""); Default( 1 ); Range( 1, 16 ); >;
     IntAttribute( ResolutionDownSampling, true );
 
+    // float4 I< UiGroup(""); >;
+    // Float4Attribute( I, true );
+
     // Create our output
     struct PS_OUTPUT
     {
@@ -87,11 +95,28 @@ PS
     #include "raymarch_dithering.fxc"
     #include "raymarch_shading.fxc"
     #include "raymarch_materials.fxc"
-    #include "raymarch_sdf.fxc"
     #include "raymarch_basic.fxc"
+    #include "raymarch_sdf.fxc"
     // ================================================================================
     
-    #define GRASS_COLOR float4( 0.416, 0.6, 0.224, 1.0 )
+    float GetLight( float3 p, float3 camPos, float3 n, Material mat )
+    { 
+        // Lambert shading
+        float3 l = g_vSunLightDir;
+        float fLambert = ShadeDiffuse( n, l );
+
+        // Specular
+        float3 v = normalize( camPos - p );
+        float3 h = normalize( l + v );
+        fLambert += ShadeSpecular( n, h, mat.specularPow ) * mat.specularAmt;
+    
+        return fLambert;
+    }
+
+    float SinAdj( float offset = 0 ) 
+    {
+        return ( 0.5 * sin( g_flTime * 4 + offset ) + 0.5 );
+    }
 
     float GetDist( float3 p, out Material mat ) 
     {
@@ -99,13 +124,41 @@ PS
 
         mat = MAT_ERROR;
 
-        d = OpU( d, Terrain( p ), MAT_MUD, mat );
-        d = OpD( d, -p.z, MAT_GRASS, mat );
+        d = MandelBox( p );
+        mat = MAT_MATTE_BLACK;
 
-        d = OpD( d, Sphere( p - float3( 10.0, 10.0, 3 ), 32 ), MAT_SAND, mat );
-        d = OpU( d, Box( p - float3( 10.0, 10.0, 3 ), float3( 3, 3, 1000 ) ), MAT_MATTE_BLACK, mat );
+        // d = OpU( d, p.z, MAT_GRASS, mat );
+
+        // // Create bobbing spheres on x and y 
+        // for ( int x = 1; x < 6; x++ ) 
+        // {
+        //     for ( int y = 1; y < 6; y++ )
+        //     {
+        //         float4 s = float4( x * 3, y * 3, 1 * SinAdj( x * y ) + 1, 1 );
+        //         d = OpU( d, length( p - s.xyz ) - s.w, MAT_WATER, mat );
+        //     }
+        // }
+
+        // d = OpU( d, Box( p - float3( 20.0, 20.0, 3 ), float3( 3, 3, 3 ) ), MAT_MATTE_BLACK, mat );
 
         return d;
+    }
+
+        
+    float GetAO( in float3 pos, in float3 nor )
+    {
+        Material _;
+        float occ = 0.0;
+        float sca = 1.0;
+        for( int i = 0; i < 5; i++ )
+        {
+            float h = 0.01 + 0.12 * float( i ) / 2;
+            float d = GetDist( pos + h * nor, _ );
+            occ += (h - d) * sca;
+            sca *= 0.95;
+            if( occ > 0.35 ) break;
+        }
+        return clamp( 1.0 - 3.0 * occ, 0, 1.0 ) * ( 0.5 + 0.5 * nor.y );
     }
 
     //
@@ -121,7 +174,7 @@ PS
         float3 cameraPosition = float3( g_vCameraPositionWs.x, g_vCameraPositionWs.y, g_vCameraPositionWs.z ) / 128;
         cameraPosition = cameraPosition + float3( 0, 0, 1 );
 
-        const float fov = 110;
+        const float fov = 130;
         float Px, Py;
         SetupCamera( vSnappedUvs, fov, Px, Py );
 
@@ -132,9 +185,8 @@ PS
         float3 ro = ray.pos;
         float3 rd = ray.dir;
 
-        float3 resultRd;
         Material mat;
-        float d = RayMarch( ro, rd, mat, resultRd );
+        float d = RayMarch( ro, rd, mat );
 
         // Sun calc
         float sun = clamp( dot( g_vSunLightDir, rd ), 0.0, 1.0 );
@@ -142,14 +194,10 @@ PS
         //
         // Lighting / render calculations
         // 
-        float3 p = ro + resultRd * d;
+        float3 p = ro + rd * d;
         float3 n = GetNormal( p );
         float fLambert = GetLight( p, cameraPosition, n, mat );
-
-        float grassAmt = smoothstep( 0, 1.0, GetNormal( p.xyz ).z * 12 );
-        mat.color = lerp( mat.color, GRASS_COLOR, grassAmt );
-
-        inColor = ( mat.color * AmbientColor.xyzx * 1.1 ) + ( mat.color * fLambert * 0.6 );
+        inColor = ( AmbientColor.xyzx * 0.7 ) + ( mat.color * fLambert * 0.6 );
 
         // AO
         inColor = lerp( inColor * 0.8, inColor, GetAO( p, n ) );
@@ -157,19 +205,20 @@ PS
         // Sun glare
         inColor += ( sun * 0.05 * float4(1,0,0,1) );
 
-        float fogMul = pow( d / MaxDist, 2 );
+        float fogMul = d / MAX_DIST;
         fogMul = clamp( fogMul, 0, 1 );
 
         // Ray didn't hit an object, just draw a basic sky
         float3 fogCol = SkyColor;
         inColor = lerp( inColor, float4( fogCol, 1 ), fogMul );
 
-        inColor.xyz += ( 0.05 * g_vSunLightColor.xyz * pow( sun, 32.0 ) ) * pow( fogMul, 12 );
-        inColor.xyz += ( 1.0 * g_vSunLightColor.xyz * pow( sun, 2048.0 ) ) * pow( fogMul, 12 );
+        
+        inColor.xyz += ( 0.2 * g_vSunLightColor.xyz * pow( sun, 8.0 ) ) * pow( fogMul, 2 );
+        inColor.xyz += ( 1.0 * g_vSunLightColor.xyz * pow( sun, 2048.0 ) ) * pow( fogMul, 2 );
 
         inColor = smoothstep( 0.15, 1.1, inColor );
 
-        return pow( inColor, 0.6 );
+        return SrgbGammaToLinear( inColor.xyz ).xyzx;
     }
 
     //
