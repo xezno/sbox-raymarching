@@ -2,7 +2,7 @@
 
 This is a basic work-in-progress raymarching demo / proof-of-concept.
 
-If you have s&box, you can play a version of it [here](https://explorer.sboxed.com/assets/gamemode/alex.godrealm) (or just search for "Alex's God Realm" in-game).
+If you have s&box, just search for "Alex's God Realm" in-game.
 
 ## Screenshots
 
